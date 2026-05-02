@@ -6,7 +6,8 @@ st.set_page_config(page_title="スコア記録", layout="centered")
 
 # --- 初期設定 ---
 items_won = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', '相手のミス', '相手のダブルフォルト']
-items_lost = ['ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス', '相手のエース']
+# 失点に「相手のサービスエース」を追加
+items_lost = ['ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス', '相手のエース', '相手のサービスエース']
 
 if 'history' not in st.session_state:
     st.session_state.history = []
@@ -14,7 +15,7 @@ if 'history' not in st.session_state:
     st.session_state.p2_stats = {item: 0 for item in items_won + items_lost}
     st.session_state.game_score = [0, 0]
     st.session_state.point_score = [0, 0]
-    st.session_state.active_player = 1  # 現在入力中の選手
+    st.session_state.active_player = 1 
 
 # --- 記録処理 ---
 def process_action(p_num, item, is_won):
@@ -33,7 +34,7 @@ def process_action(p_num, item, is_won):
         else: st.session_state.game_score[1] += 1
         st.session_state.point_score = [0, 0]
 
-# クエリパラメータ処理
+# URLパラメータ処理
 params = st.query_params
 if "p" in params:
     process_action(int(params["p"]), params["i"], params["w"] == "1")
@@ -45,41 +46,31 @@ st.markdown("""
 <style>
     .block-container { padding: 1rem 0.5rem !important; }
     .score-box { text-align: center; background: #1E1E1E; color: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 2px solid #444; }
-    
     .flex-container { display: flex; width: 100%; gap: 8px; }
     .flex-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-    
     .btn {
         display: block; width: 100%; height: 48px; line-height: 48px;
         text-align: center; text-decoration: none; border-radius: 8px;
-        font-size: 14px; font-weight: bold;
+        font-size: 13px; font-weight: bold;
     }
-    /* 得点：視認性の高い濃いめの青（文字は白） */
     .btn-win { background-color: #1976D2; color: white; border: 1px solid #1565C0; }
-    /* 失点：落ち着いた赤（文字は白） */
     .btn-loss { background-color: #D32F2F; color: white; border: 1px solid #B71C1C; }
-    
-    .player-toggle {
-        display: flex; justify-content: center; margin-bottom: 15px; gap: 10px;
-    }
-    .toggle-btn {
-        padding: 10px 25px; border-radius: 20px; border: 2px solid #1976D2;
-        background: white; color: #1976D2; font-weight: bold; cursor: pointer;
-    }
-    .toggle-active {
-        background: #1976D2; color: white;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 画面表示 ---
+# --- 試合情報入力エリア ---
 st.title("📋 スコア記録")
-p1_name = st.sidebar.text_input("選手1 名前", value="選手1")
-p2_name = st.sidebar.text_input("選手2 名前", value="選手2")
+
+with st.expander("📝 選手名・試合情報を入力", expanded=True):
+    match_title = st.text_input("試合名（例：〇〇大会 決勝）", value="")
+    col_names = st.columns(2)
+    p1_name = col_names[0].text_input("選手1 名前", value="選手1")
+    p2_name = col_names[1].text_input("選手2 名前", value="選手2")
 
 # スコア表示
 st.markdown(f"""
 <div class="score-box">
+    <div style="font-size: 14px; opacity:0.7;">{match_title if match_title else 'MATCH'}</div>
     <div style="font-size: 22px; font-weight: bold;">{st.session_state.game_score[0]} — {st.session_state.game_score[1]}</div>
     <div style="font-size: 36px; color: #FFD700; font-weight: bold;">{st.session_state.point_score[0]} — {st.session_state.point_score[1]}</div>
 </div>
@@ -97,7 +88,7 @@ if st.button("⬅️ やり直し", use_container_width=True):
 
 st.divider()
 
-# --- 選手切り替えスイッチ ---
+# --- 選手切り替え ---
 st.write("▼ 入力する選手を選択")
 col_sel1, col_sel2 = st.columns(2)
 if col_sel1.button(f"👤 {p1_name}", type="primary" if st.session_state.active_player == 1 else "secondary", use_container_width=True):
@@ -107,11 +98,11 @@ if col_sel2.button(f"👤 {p2_name}", type="primary" if st.session_state.active_
     st.session_state.active_player = 2
     st.rerun()
 
-# --- 操作エリア (選択中の選手のみ表示) ---
+# --- 操作エリア ---
 p_num = st.session_state.active_player
 current_name = p1_name if p_num == 1 else p2_name
 
-st.markdown(f"### 現在入力中: **{current_name}**")
+st.markdown(f"### 入力中: **{current_name}**")
 
 win_html = "".join([f'<a href="?p={p_num}&i={item}&w=1" class="btn btn-win" target="_self">{item}</a>' for item in items_won])
 loss_html = "".join([f'<a href="?p={p_num}&i={item}&w=0" class="btn btn-loss" target="_self">{item}</a>' for item in items_lost])
@@ -131,9 +122,10 @@ st.markdown(f"""
 
 # --- 統計 ---
 st.divider()
-if st.checkbox("統計データを確認"):
+if st.checkbox("📊 統計データを確認"):
+    st.write(f"**試合:** {match_title}")
     for name, stats in [(p1_name, st.session_state.p1_stats), (p2_name, st.session_state.p2_stats)]:
-        st.write(f"**{name}**")
+        st.write(f"**【{name}】**")
         df = pd.DataFrame(list(stats.items()), columns=['項目', '回数'])
         total = sum(stats.values())
         df['%'] = df['回数'].apply(lambda x: f"{(x/total*100):.1f}%" if total > 0 else "0%")

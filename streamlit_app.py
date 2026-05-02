@@ -6,7 +6,6 @@ st.set_page_config(page_title="スコア記録", layout="centered")
 
 # --- 初期設定 ---
 items_won = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', '相手のミス', '相手のダブルフォルト']
-# 失点に「相手のサービスエース」を追加
 items_lost = ['ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス', '相手のエース', '相手のサービスエース']
 
 if 'history' not in st.session_state:
@@ -48,21 +47,29 @@ st.markdown("""
     .score-box { text-align: center; background: #1E1E1E; color: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; border: 2px solid #444; }
     .flex-container { display: flex; width: 100%; gap: 8px; }
     .flex-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    
+    /* ボタン共通：文字色を白(#FFFFFF)に固定 */
     .btn {
         display: block; width: 100%; height: 48px; line-height: 48px;
         text-align: center; text-decoration: none; border-radius: 8px;
         font-size: 13px; font-weight: bold;
+        color: #FFFFFF !important; 
     }
-    .btn-win { background-color: #1976D2; color: white; border: 1px solid #1565C0; }
-    .btn-loss { background-color: #D32F2F; color: white; border: 1px solid #B71C1C; }
+    /* 得点：濃い青 */
+    .btn-win { background-color: #1976D2; border: 1px solid #1565C0; }
+    /* 失点：濃い赤 */
+    .btn-loss { background-color: #D32F2F; border: 1px solid #B71C1C; }
+    
+    /* ラベルの文字色調整 */
+    .column-label { text-align: center; font-weight: bold; margin-bottom: 5px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 試合情報入力エリア ---
+# --- 試合情報入力 ---
 st.title("📋 スコア記録")
 
-with st.expander("📝 選手名・試合情報を入力", expanded=True):
-    match_title = st.text_input("試合名（例：〇〇大会 決勝）", value="")
+with st.expander("📝 選手名・試合情報を入力"):
+    match_title = st.text_input("試合名", value="")
     col_names = st.columns(2)
     p1_name = col_names[0].text_input("選手1 名前", value="選手1")
     p2_name = col_names[1].text_input("選手2 名前", value="選手2")
@@ -76,8 +83,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# やり直しボタン
-if st.button("⬅️ やり直し", use_container_width=True):
+# 一つ戻るボタン（名称変更）
+if st.button("⬅️ 一つ戻る", use_container_width=True):
     if st.session_state.history:
         last = st.session_state.history.pop()
         player, item, is_won, old_p, old_g = last
@@ -100,21 +107,19 @@ if col_sel2.button(f"👤 {p2_name}", type="primary" if st.session_state.active_
 
 # --- 操作エリア ---
 p_num = st.session_state.active_player
-current_name = p1_name if p_num == 1 else p2_name
 
-st.markdown(f"### 入力中: **{current_name}**")
-
+# 「入力中：選手名」の表示を削除し、直接ボタンエリアへ
 win_html = "".join([f'<a href="?p={p_num}&i={item}&w=1" class="btn btn-win" target="_self">{item}</a>' for item in items_won])
 loss_html = "".join([f'<a href="?p={p_num}&i={item}&w=0" class="btn btn-loss" target="_self">{item}</a>' for item in items_lost])
 
 st.markdown(f"""
 <div class="flex-container">
     <div class="flex-col">
-        <div style="text-align:center; font-weight:bold; color:#1976D2;">得点</div>
+        <div class="column-label" style="color:#1976D2;">🔵得点</div>
         {win_html}
     </div>
     <div class="flex-col">
-        <div style="text-align:center; font-weight:bold; color:#D32F2F;">失点</div>
+        <div class="column-label" style="color:#D32F2F;">🔴失点</div>
         {loss_html}
     </div>
 </div>

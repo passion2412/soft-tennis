@@ -18,7 +18,7 @@ if 'history' not in st.session_state:
     st.session_state.point_score = [0, 0]
     st.session_state.active_player = 1 
 
-# --- 記録処理関数 ---
+# --- 記録処理 ---
 def add_point(p_num, item, is_won):
     st.session_state.history.append((
         p_num, item, is_won, 
@@ -37,72 +37,68 @@ def add_point(p_num, item, is_won):
         else: st.session_state.game_score[1] += 1
         st.session_state.point_score = [0, 0]
 
-# --- CSS設定（強制2列グリッド） ---
+# --- CSS（スマホ強制2列 & 色の固定） ---
 st.markdown("""
 <style>
-    /* 全体のマージン削減 */
-    .block-container { padding: 1rem 0.5rem !important; }
-    
-    /* 2列を絶対維持するコンテナ */
-    .grid-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        width: 100%;
+    /* 1. どんな環境でも1列にさせない設定 */
+    [data-testid="column"] {
+        flex: 1 1 50% !important;
+        width: 50% !important;
+        min-width: 50% !important;
     }
-
-    /* ボタンの共通スタイル */
+    /* 2. ボタンの文字色と背景色を強制固定（白飛び防止） */
     .stButton > button {
         width: 100% !important;
         height: 50px !important;
-        font-weight: bold !important;
-        color: white !important;
         border-radius: 8px !important;
-        margin: 0 !important;
+        font-weight: bold !important;
         font-size: 13px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        margin-bottom: 2px !important;
     }
-
-    /* 得点ボタン（青） */
-    div.win-btn > div.stButton > button {
-        background-color: #1976D2 !important;
-        border: 1px solid #1565C0 !important;
+    /* 得点ボタン：濃い青背景に絶対白文字 */
+    div[data-testid="column"]:nth-of-type(1) .stButton > button {
+        background-color: #0056b3 !important;
+        color: #ffffff !important;
+        border: 2px solid #004085 !important;
     }
-
-    /* 失点ボタン（赤） */
-    div.loss-btn > div.stButton > button {
-        background-color: #D32F2F !important;
-        border: 1px solid #B71C1C !important;
+    /* 失点ボタン：濃い赤背景に絶対白文字 */
+    div[data-testid="column"]:nth-of-type(2) .stButton > button {
+        background-color: #c82333 !important;
+        color: #ffffff !important;
+        border: 2px solid #a71d2a !important;
     }
-
-    .score-box { text-align: center; background: #1E1E1E; color: white; padding: 10px; border-radius: 10px; border: 2px solid #444; }
-    .game-history { background: #f0f2f6; padding: 5px; border-radius: 5px; text-align: center; font-size: 14px; margin: 5px 0; }
-    .label { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+    /* スコア表示 */
+    .score-card {
+        text-align: center;
+        background: #222222;
+        color: #ffffff;
+        padding: 10px;
+        border-radius: 10px;
+        border: 2px solid #ffd700;
+        margin-bottom: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 画面構成 ---
+# --- メイン画面 ---
 st.title("📋 スコア記録")
 
-with st.expander("📝 試合情報を入力"):
+with st.expander("📝 試合設定"):
     match_title = st.text_input("試合名", value="")
-    c1, c2 = st.columns(2)
-    p1_name = c1.text_input("選手1", value="選手1")
-    p2_name = c2.text_input("選手2", value="選手2")
+    p1_name = st.text_input("選手1 名前", value="選手1")
+    p2_name = st.text_input("選手2 名前", value="選手2")
 
 # スコア表示
 st.markdown(f"""
-<div class="score-box">
-    <div style="font-size: 12px; opacity:0.7;">{match_title if match_title else 'MATCH'}</div>
-    <div style="font-size: 20px; font-weight: bold;">{st.session_state.game_score[0]} — {st.session_state.game_score[1]}</div>
-    <div style="font-size: 32px; color: #FFD700; font-weight: bold;">{st.session_state.point_score[0]} — {st.session_state.point_score[1]}</div>
+<div class="score-card">
+    <div style="font-size: 14px;">{match_title}</div>
+    <div style="font-size: 24px; font-weight: bold;">{st.session_state.game_score[0]} — {st.session_state.game_score[1]}</div>
+    <div style="font-size: 40px; font-weight: bold; color: #ffd700;">{st.session_state.point_score[0]} — {st.session_state.point_score[1]}</div>
 </div>
 """, unsafe_allow_html=True)
 
 if st.session_state.game_results:
-    st.markdown(f"<div class='game-history'>履歴: {' / '.join(st.session_state.game_results)}</div>", unsafe_allow_html=True)
+    st.info(f"ゲーム履歴: {' / '.join(st.session_state.game_results)}")
 
 if st.button("⬅️ 一つ戻る", use_container_width=True):
     if st.session_state.history:
@@ -116,56 +112,43 @@ if st.button("⬅️ 一つ戻る", use_container_width=True):
 st.divider()
 
 # 選手切り替え
-sel1, sel2 = st.columns(2)
-if sel1.button(f"👤 {p1_name}", type="primary" if st.session_state.active_player == 1 else "secondary", key="p1_sel", use_container_width=True):
+c_sel1, c_sel2 = st.columns(2)
+if c_sel1.button(f"👤 {p1_name}", type="primary" if st.session_state.active_player == 1 else "secondary", use_container_width=True):
     st.session_state.active_player = 1
     st.rerun()
-if sel2.button(f"👤 {p2_name}", type="primary" if st.session_state.active_player == 2 else "secondary", key="p2_sel", use_container_width=True):
+if c_sel2.button(f"👤 {p2_name}", type="primary" if st.session_state.active_player == 2 else "secondary", use_container_width=True):
     st.session_state.active_player = 2
     st.rerun()
 
-# --- 強制2列レイアウトエリア ---
+# --- ボタン操作エリア（ここを1行ずつのカラムにして強制並びを実現） ---
 p_num = st.session_state.active_player
+st.markdown(f"**【{p1_name if p_num == 1 else p2_name}】の入力**")
 
-# ラベル部分
-st.markdown(f"""
-<div class="grid-container">
-    <div class="label" style="color:#1976D2;">🔵得点</div>
-    <div class="label" style="color:#D32F2F;">🔴失点</div>
-</div>
-""", unsafe_allow_html=True)
-
-# ボタン部分（最大項目数に合わせてループ）
 max_rows = max(len(items_won), len(items_lost))
 for i in range(max_rows):
-    # CSSのクラスを使ってボタンの色を制御
-    col_win, col_loss = st.columns(2)
+    col1, col2 = st.columns(2) # 1行ごとに2列作る
     
-    with col_win:
+    with col1:
         if i < len(items_won):
-            item = items_won[i]
-            st.markdown('<div class="win-btn">', unsafe_allow_html=True)
-            st.button(item, key=f"w_{i}", on_click=add_point, args=(p_num, item, True))
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-    with col_right if 'col_right' in locals() else col_loss:
+            item_w = items_won[i]
+            st.button(item_w, key=f"win_{i}", on_click=add_point, args=(p_num, item_w, True))
+    
+    with col2:
         if i < len(items_lost):
-            item = items_lost[i]
-            st.markdown('<div class="loss-btn">', unsafe_allow_html=True)
-            st.button(item, key=f"l_{i}", on_click=add_point, args=(p_num, item, False))
-            st.markdown('</div>', unsafe_allow_html=True)
+            item_l = items_lost[i]
+            st.button(item_l, key=f"loss_{i}", on_click=add_point, args=(p_num, item_l, False))
 
-# --- 統計データ ---
+# --- 統計 ---
 st.divider()
-if st.checkbox("📊 統計データを確認"):
+if st.checkbox("📊 統計を確認"):
     for name, stats in [(p1_name, st.session_state.p1_stats), (p2_name, st.session_state.p2_stats)]:
-        st.write(f"**【{name} 統計】**")
-        filtered_stats = {k: v for k, v in stats.items() if k not in exclude_items}
-        df = pd.DataFrame(list(filtered_stats.items()), columns=['項目', '回数'])
-        total = sum(filtered_stats.values())
+        st.write(f"**{name}**")
+        filtered = {k: v for k, v in stats.items() if k not in exclude_items}
+        df = pd.DataFrame(list(filtered.items()), columns=['項目', '回数'])
+        total = sum(filtered.values())
         df['%'] = df['回数'].apply(lambda x: f"{(x/total*100):.1f}%" if total > 0 else "0%")
         st.table(df)
 
-if st.button("全データをリセット"):
+if st.button("リセット"):
     st.session_state.clear()
     st.rerun()

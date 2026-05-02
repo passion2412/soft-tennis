@@ -4,26 +4,36 @@ import pandas as pd
 # ページ設定
 st.set_page_config(page_title="スコア記録", layout="centered")
 
-# CSSでボタンの隙間や余白を極限まで削るカスタム
+# スマホでも横並びを維持し、ボタンをコンパクトにするCSS
 st.markdown("""
     <style>
+    /* カラムの横並びを維持 */
+    [data-testid="column"] {
+        width: 50% !important;
+        flex: 1 1 50% !important;
+        min-width: 50% !important;
+    }
+    /* ボタンをさらに小さく */
     .stButton button {
-        padding: 5px 2px !important;
-        font-size: 14px !important;
-        margin-bottom: -10px !important;
+        width: 100%;
+        padding: 2px 0px !important;
+        font-size: 12px !important;
+        margin-bottom: 2px !important;
+        height: 35px !important;
     }
+    /* 全体の余白を削る */
     .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
+        padding: 0.5rem 0.5rem !important;
     }
-    div[data-testid="column"] {
-        padding: 0px 5px !important;
+    h1, h2, h3 {
+        padding: 0 !important;
+        margin: 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 初期設定 ---
-items_won = ['サービスエース', 'レシーブエース', 'スマッシュ', 'ノータッチ', 'ボレー', '相手ミス', '相手DF']
+items_won = ['サービスA', 'レシーブA', 'スマッシュ', 'ノータッチ', 'ボレー', '相手ミス', '相手DF']
 items_lost = ['DF', 'レシーブミス', 'スマミス', 'ストミス', 'ボレーミス', '相手エース']
 
 if 'history' not in st.session_state:
@@ -33,29 +43,21 @@ if 'history' not in st.session_state:
     st.session_state.game_score = [0, 0]
     st.session_state.point_score = [0, 0]
 
-# --- メイン画面 ---
-st.title("📋 スコア記録")
-
-# 試合情報入力（最初だけ表示されるよう折りたたみ）
+# --- 試合情報（折りたたみ） ---
 with st.expander("試合詳細設定"):
-    match_name = st.text_input("大会名", placeholder="〇〇大会")
-    opp_team = st.text_input("対戦相手", placeholder="〇〇ペア")
-    col_n1, col_n2 = st.columns(2)
-    p1_name = col_n1.text_input("選手1", value="選手1")
-    p2_name = col_n2.text_input("選手2", value="選手2")
+    p1_name = st.text_input("選手1", value="選手1")
+    p2_name = st.text_input("選手2", value="選手2")
+    match_info = st.text_input("試合名/相手", value="")
 
-# --- スコア表示エリア ---
-# ゲーム数の下にポイントを表示
+# --- スコア表示 ---
 st.markdown(f"""
-    <div style="text-align: center; background-color: #f0f2f6; padding: 10px; border-radius: 10px;">
-        <p style="margin: 0; font-size: 16px; color: #555;">GAME COUNT</p>
-        <h2 style="margin: 0;">{st.session_state.game_score[0]} — {st.session_state.game_score[1]}</h2>
-        <p style="margin: 5px 0 0 0; font-size: 14px; color: #555;">POINTS</p>
-        <h1 style="margin: 0; color: #ff4b4b;">{st.session_state.point_score[0]} — {st.session_state.point_score[1]}</h1>
+    <div style="text-align: center; background-color: #f0f2f6; padding: 5px; border-radius: 8px; margin-bottom: 5px;">
+        <h3 style="margin: 0; font-size: 14px;">G: {st.session_state.game_score[0]} — {st.session_state.game_score[1]}</h3>
+        <h2 style="margin: 0; color: #ff4b4b;">P: {st.session_state.point_score[0]} — {st.session_state.point_score[1]}</h2>
     </div>
     """, unsafe_allow_html=True)
 
-# 戻るボタンを「やり直し」に変更
+# やり直しボタン
 if st.button("⬅️ やり直し", use_container_width=True):
     if len(st.session_state.history) > 0:
         last_action = st.session_state.history.pop()
@@ -73,50 +75,44 @@ def add_record(player, item, is_won):
     ))
     if player == 1: st.session_state.p1_stats[item] += 1
     else: st.session_state.p2_stats[item] += 1
-    
     if is_won: st.session_state.point_score[0] += 1
     else: st.session_state.point_score[1] += 1
-    
-    p, o = st.session_score = st.session_state.point_score
+    p, o = st.session_state.point_score
     if (p >= 4 or o >= 4) and abs(p - o) >= 2:
         if p > o: st.session_state.game_score[0] += 1
         else: st.session_state.game_score[1] += 1
         st.session_state.point_score = [0, 0]
 
-st.markdown("---")
-
-# --- 操作エリア（スクロールなしで1画面に収めるための2カラム×2レイアウト） ---
-# 選手をタブではなく上下に並べ、さらに「得点」「失点」を横に並べる
-def render_player_buttons(player_num, name):
-    st.markdown(f"**【{name}】**")
-    win_col, loss_col = st.columns(2)
-    with win_col:
+# --- ボタン配置 ---
+def render_buttons(p_num, name):
+    st.markdown(f"<p style='margin: 0; font-weight: bold; font-size: 14px;'>【{name}】</p>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.caption("🔵得点")
         for item in items_won:
-            if st.button(f"✨{item}", key=f"w{player_num}{item}", use_container_width=True):
-                add_record(player_num, item, True)
+            if st.button(item, key=f"w{p_num}{item}"):
+                add_record(p_num, item, True)
                 st.rerun()
-    with loss_col:
+    with c2:
+        st.caption("🔴失点")
         for item in items_lost:
-            if st.button(f"×{item}", key=f"l{player_num}{item}", use_container_width=True):
-                add_record(player_num, item, False)
+            if st.button(item, key=f"l{p_num}{item}"):
+                add_record(p_num, item, False)
                 st.rerun()
 
-# 選手1と選手2をコンパクトに表示
-render_player_buttons(1, p1_name)
-st.markdown("<div style='margin: 10px;'></div>", unsafe_allow_html=True)
-render_player_buttons(2, p2_name)
+render_buttons(1, p1_name)
+st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+render_buttons(2, p2_name)
 
-# --- 統計データ ---
-st.markdown("---")
-if st.checkbox("📊 統計データ表示"):
-    st.write(f"**試合:** {match_name} / **相手:** {opp_team}")
+# --- 統計 ---
+if st.checkbox("統計表示"):
     for name, stats in [(p1_name, st.session_state.p1_stats), (p2_name, st.session_state.p2_stats)]:
         st.write(f"**{name}**")
         df = pd.DataFrame(list(stats.items()), columns=['項目', '回数'])
-        total = df['回数'].sum()
+        total = sum(stats.values())
         df['%'] = df['回数'].apply(lambda x: f"{(x/total*100):.1f}%" if total > 0 else "0%")
-        st.dataframe(df, hide_index=True, use_container_width=True)
+        st.table(df)
 
-if st.button("全データをリセット", type="primary"):
+if st.button("リセット"):
     st.session_state.clear()
     st.rerun()

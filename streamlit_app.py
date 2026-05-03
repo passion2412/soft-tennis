@@ -21,106 +21,99 @@ def add_point(item, is_win):
     p_num = st.session_state.active_player
     stats = st.session_state.p1_stats if p_num == 1 else st.session_state.p2_stats
     stats[item] += 1
-    
     if is_win: st.session_state.p1_score += 1
     else: st.session_state.p2_score += 1
-    
-    # ゲーム終了判定 (4ポイント先取、2点差)
+    # スコア判定
     p1, p2 = st.session_state.p1_score, st.session_state.p2_score
     if (p1 >= 4 or p2 >= 4) and abs(p1 - p2) >= 2:
         if p1 > p2: st.session_state.p1_games += 1
         else: st.session_state.p2_games += 1
         st.session_state.p1_score, st.session_state.p2_score = 0, 0
 
-# --- 3. CSS（2列固定・白背景・黒文字） ---
+# --- 3. CSS (文字色と横幅を強制固定) ---
 st.markdown("""
 <style>
-    /* 全体の背景と文字色 */
+    /* 1. 背景を白、ベース文字色を黒に固定 */
     .stApp { background-color: white !important; color: black !important; }
     
-    /* スコアボード */
-    .score-card {
-        text-align: center; border: 2px solid #333; padding: 15px; 
-        border-radius: 12px; background-color: #f8f9fa; margin-bottom: 20px;
-    }
-
-    /* iPhone縦画面でも絶対に2列を維持する設定 */
-    [data-testid="column"] {
-        flex: 1 1 calc(50% - 10px) !important;
-        min-width: calc(50% - 10px) !important;
-    }
-    div[data-testid="stHorizontalBlock"] {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-    }
-
-    /* ボタンの色と形 */
+    /* 2. ボタンの文字色と背景色を強制指定 */
+    /* 全ボタン共通 */
     div.stButton > button {
         width: 100% !important;
-        height: 55px !important;
-        color: white !important;
+        height: 50px !important;
         font-weight: bold !important;
-        border: none !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
+        margin-bottom: -10px !important;
     }
-    /* 青ボタン(得点) */
-    div.win-btn button { background-color: #007AFF !important; }
-    /* 赤ボタン(失点) */
-    div.loss-btn button { background-color: #FF3B30 !important; }
+    
+    /* 左側(得点)ボタン: 青背景に白文字 */
+    [data-testid="column"]:nth-of-type(1) div.stButton > button {
+        background-color: #007AFF !important;
+        color: white !important;
+    }
+    
+    /* 右側(失点)ボタン: 赤背景に白文字 */
+    [data-testid="column"]:nth-of-type(2) div.stButton > button {
+        background-color: #FF3B30 !important;
+        color: white !important;
+    }
+
+    /* 3. スマッシュ等の文字が見えないのを防ぐため、ボタン内のテキスト色を再定義 */
+    div.stButton > button p {
+        color: white !important;
+    }
+
+    /* 4. 2列横並びをiPhoneでも強制 */
+    [data-testid="stHorizontalBlock"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 5px !important;
+    }
+    [data-testid="column"] {
+        width: 49% !important;
+        flex: 1 1 auto !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 4. 画面表示 ---
-# スコア
 st.markdown(f"""
-<div class="score-card">
-    <div style="font-size: 26px; font-weight: bold; color: black;">
-        {st.session_state.p1_games} — {st.session_state.p2_games}
-    </div>
-    <div style="font-size: 52px; font-weight: 900; color: #007AFF;">
-        {st.session_state.p1_score} — {st.session_state.p2_score}
-    </div>
-    <div style="font-size: 14px; color: #555;">{st.session_state.p1_name} vs {st.session_state.p2_name}</div>
+<div style="text-align: center; border: 2px solid black; padding: 10px; border-radius: 10px; background-color: #f0f2f6;">
+    <div style="font-size: 24px; font-weight: bold; color: black;">{st.session_state.p1_games} — {st.session_state.p2_games}</div>
+    <div style="font-size: 48px; font-weight: bold; color: #007AFF;">{st.session_state.p1_score} — {st.session_state.p2_score}</div>
+    <div style="font-size: 14px; color: black;">{st.session_state.p1_name} vs {st.session_state.p2_name}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# 選手切り替え
+# 選手選択
 c1, c2 = st.columns(2)
-if c1.button(f"👤 {st.session_state.p1_name}", type="primary" if st.session_state.active_player == 1 else "secondary", use_container_width=True):
+if c1.button(st.session_state.p1_name, key="sel1", use_container_width=True):
     st.session_state.active_player = 1
     st.rerun()
-if c2.button(f"👤 {st.session_state.p2_name}", type="primary" if st.session_state.active_player == 2 else "secondary", use_container_width=True):
+if c2.button(st.session_state.p2_name, key="sel2", use_container_width=True):
     st.session_state.active_player = 2
     st.rerun()
 
 st.divider()
 
-# --- 5. 入力ボタン（ここが核心） ---
+# --- 5. 入力エリア (ここが死守ポイント) ---
 active_name = st.session_state.p1_name if st.session_state.active_player == 1 else st.session_state.p2_name
 st.markdown(f"<p style='text-align:center; font-weight:bold; color:black;'>入力中: {active_name}</p>", unsafe_allow_html=True)
 
-# ヘッダー
-h1, h2 = st.columns(2)
-h1.markdown("<div style='text-align:center; background:#007AFF; color:white; border-radius:5px; font-weight:bold; padding:3px;'>🔵 得点</div>", unsafe_allow_html=True)
-h2.markdown("<div style='text-align:center; background:#FF3B30; color:white; border-radius:5px; font-weight:bold; padding:3px;'>🔴 失点</div>", unsafe_allow_html=True)
-
-# ボタンリストを確実に2列で配置
+# 1行ずつ確実に2列で表示
 for w_item, l_item in zip(items_won, items_lost):
-    col_w, col_l = st.columns(2)
-    with col_w:
-        st.markdown('<div class="win-btn">', unsafe_allow_html=True)
-        st.button(w_item, key=f"btn_{w_item}", on_click=add_point, args=(w_item, True))
-        st.markdown('</div>', unsafe_allow_html=True)
-    with col_l:
-        st.markdown('<div class="loss-btn">', unsafe_allow_html=True)
-        st.button(l_item, key=f"btn_{l_item}", on_click=add_point, args=(l_item, False))
+    row_c1, row_c2 = st.columns(2)
+    with row_c1:
+        st.button(w_item, key=f"w_{w_item}", on_click=add_point, args=(w_item, True))
+    with row_c2:
+        st.button(l_item, key=f"l_{l_item}", on_click=add_point, args=(l_item, False))
 
-# --- 6. 統計とリセット ---
-st.divider()
+# --- 6. 統計 ---
 if st.checkbox("📊 統計表示"):
     st.write(f"**{st.session_state.p1_name}**", pd.Series(st.session_state.p1_stats))
     st.write(f"**{st.session_state.p2_name}**", pd.Series(st.session_state.p2_stats))
 
-if st.button("全リセット", use_container_width=True):
+if st.button("リセット"):
     st.session_state.clear()
     st.rerun()

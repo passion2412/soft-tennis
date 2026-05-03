@@ -225,6 +225,11 @@ html_code = """
     </script>
 </body>
 </html>
+
+
+room_id = st.query_params.get("room", "default")
+components.html(html_code, height=1300, scrolling=True, key=room_id)
+
 """
 
-components.html(html_code, height=1300, scrolling=True)
+comp

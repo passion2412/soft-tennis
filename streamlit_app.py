@@ -2,9 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ページ設定
-st.set_page_config(page_title="Tennis Stats", layout="centered")
+st.set_page_config(page_title="Tennis Stats for Screenshot", layout="centered")
 
-# HTML完全版（タイトル削除 ＆ 統計項目修正）
 html_code = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -16,38 +15,33 @@ html_code = """
         .match-name { text-align: center; font-size: 14px; margin-bottom: 5px; color: #666; font-weight: bold; }
         
         /* スコアボード */
-        .score-box { background: #222; color: white; border-radius: 12px; text-align: center; padding: 12px; margin-bottom: 12px; }
-        .pair-names { font-size: 12px; opacity: 0.8; margin-bottom: 3px; }
-        .main-score { font-size: 46px; font-weight: 900; line-height: 1; margin: 8px 0; }
+        .score-box { background: #222; color: white; border-radius: 10px; text-align: center; padding: 10px; margin-bottom: 10px; }
+        .main-score { font-size: 40px; font-weight: 900; line-height: 1; margin: 5px 0; }
         .game-score { font-size: 14px; color: #4CAF50; font-weight: bold; }
 
-        /* 選手選択 */
-        .player-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-        .p-btn { border: 2px solid #007AFF; background: white; padding: 8px; border-radius: 6px; font-weight: bold; text-align: center; font-size: 13px; }
-        .p-btn.active { background: #007AFF; color: white; }
-
-        .active-label { text-align: center; font-size: 12px; font-weight: bold; margin: 8px 0; border-bottom: 1px solid #eee; padding-bottom: 4px; }
-
-        /* カウンターボタン */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        /* ボタン */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 10px; }
         .btn { 
-            height: 48px; border-radius: 5px; display: flex; align-items: center; justify-content: center; 
-            color: white !important; font-weight: bold; font-size: 11.5px; text-align: center; line-height: 1.1;
-            cursor: pointer; -webkit-tap-highlight-color: transparent; border: none;
+            height: 42px; border-radius: 5px; display: flex; align-items: center; justify-content: center; 
+            color: white !important; font-weight: bold; font-size: 11px; text-align: center; border: none;
         }
         .btn-win { background-color: #007AFF; }
         .btn-loss { background-color: #FF3B30; }
-        .btn:active { opacity: 0.6; transform: scale(0.96); }
 
-        .header { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; text-align: center; font-size: 11px; font-weight: bold; }
+        /* 統計・履歴エリア (スクショ用) */
+        .ss-container { border: 1px solid #ddd; border-radius: 8px; padding: 8px; background: #fdfdfd; margin-top: 10px; }
+        .ss-title { font-size: 12px; font-weight: bold; border-bottom: 1px solid #eee; margin-bottom: 5px; padding-bottom: 2px; text-align: center; }
         
-        /* 下部設定 */
-        .footer { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px; }
-        summary { font-size: 13px; color: #555; padding: 5px; cursor: pointer; }
-        input { width: 100%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; background: #fff; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 10px; }
+        th, td { border: 1px solid #eee; padding: 4px; text-align: center; }
         th { background: #f8f9fa; }
+
+        /* ゲーム履歴用スタイル */
+        .history-box { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; font-size: 11px; font-weight: bold; }
+        .history-item { background: #eee; padding: 2px 6px; border-radius: 4px; border: 1px solid #ccc; }
+
+        .footer { margin-top: 15px; }
+        input { width: 100%; padding: 6px; margin: 3px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -55,50 +49,43 @@ html_code = """
     <div id="match-display" class="match-name">今日の試合</div>
 
     <div class="score-box">
-        <div id="names-display" class="pair-names">自分 & ペア</div>
+        <div id="names-display" style="font-size: 11px; opacity: 0.8;">自分 & ペア vs 相手</div>
         <div id="points" class="main-score">0 — 0</div>
         <div id="games" class="game-score">Game: 0 — 0</div>
     </div>
 
-    <div class="player-selector">
-        <div id="p1-tag" class="p-btn active" onclick="setPlayer(1)">自分</div>
-        <div id="p2-tag" class="p-btn" onclick="setPlayer(2)">ペア</div>
-    </div>
+    <div class="grid" id="button-area"></div>
 
-    <div id="cur-player" class="active-label">記録中: 自分</div>
-
-    <div class="header">
-        <div style="color:#007AFF">得点</div>
-        <div style="color:#FF3B30">失点</div>
-    </div>
-
-    <div class="grid" id="button-area">
-        <!-- JSでボタン生成 -->
+    <!-- スクショ保存用エリア -->
+    <div class="ss-container">
+        <div class="ss-title">📊 試合レポート</div>
+        <div id="stats-area"></div>
+        
+        <div class="ss-title">🎾 ゲーム履歴 (各ゲームの得点)</div>
+        <div id="history-area" class="history-box"></div>
     </div>
 
     <div class="footer">
         <details>
-            <summary>⚙️ 設定 / 📊 統計を確認</summary>
+            <summary style="font-size:12px;">⚙️ 設定・名前入力</summary>
             <input type="text" id="in-match" placeholder="試合名" oninput="updateSettings()">
-            <input type="text" id="in-p1" placeholder="選手1の名前" oninput="updateSettings()">
-            <input type="text" id="in-p2" placeholder="選手2の名前" oninput="updateSettings()">
-            <button onclick="resetAll()" style="width:100%; padding:10px; background:#f44336; color:white; border:none; border-radius:4px; margin:10px 0; font-weight:bold;">全リセット</button>
-            <div id="stats-area"></div>
+            <input type="text" id="in-p1" placeholder="自分" oninput="updateSettings()">
+            <input type="text" id="in-p2" placeholder="ペア" oninput="updateSettings()">
+            <input type="text" id="in-opp" placeholder="対戦相手名" oninput="updateSettings()">
+            <button onclick="location.reload()" style="width:100%; padding:8px; background:#f44336; color:white; border:none; border-radius:4px; margin-top:10px; font-size:11px;">全リセット</button>
         </details>
     </div>
 
     <script>
         let state = {
             p1_score: 0, p2_score: 0, p1_games: 0, p2_games: 0,
-            active: 1, p1_name: "自分", p2_name: "ペア", match: "今日の試合",
-            stats: { p1: {}, p2: {} }
+            p1_name: "自分", p2_name: "ペア", opp_name: "対戦相手", match: "今日の試合",
+            stats: { p1: {}, p2: {} },
+            game_history: [] // ゲームごとのスコアを保存
         };
 
-        // カウント用全項目
         const wins = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', '相手のミス', '相手のダブルフォルト'];
         const loss = ['ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス', '相手のエース', '相手のサービスエース'];
-
-        // 統計に表示する項目（ご要望により「相手の〜」を除外）
         const statsToShow = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', 'ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス'];
 
         function initButtons() {
@@ -112,21 +99,17 @@ html_code = """
             });
         }
 
-        function setPlayer(n) {
-            state.active = n;
-            document.getElementById('p1-tag').className = n===1 ? 'p-btn active' : 'p-btn';
-            document.getElementById('p2-tag').className = n===2 ? 'p-btn active' : 'p-btn';
-            document.getElementById('cur-player').innerText = "記録中: " + (n===1 ? state.p1_name : state.p2_name);
-        }
-
         function count(item, isWin) {
-            const p = state.active === 1 ? 'p1' : 'p2';
-            state.stats[p][item]++;
+            // 現在は簡易的に「自分」の統計として加算（必要なら選手選択機能も復活可）
+            state.stats.p1[item]++;
             
             if(isWin) state.p1_score++;
             else state.p2_score++;
 
             if((state.p1_score >= 4 || state.p2_score >= 4) && Math.abs(state.p1_score - state.p2_score) >= 2) {
+                // ゲーム終了。履歴に追加
+                state.game_history.push(state.p1_score + "-" + state.p2_score);
+                
                 if(state.p1_score > state.p2_score) state.p1_games++;
                 else state.p2_games++;
                 state.p1_score = 0; state.p2_score = 0;
@@ -138,28 +121,30 @@ html_code = """
             state.match = document.getElementById('in-match').value || "今日の試合";
             state.p1_name = document.getElementById('in-p1').value || "自分";
             state.p2_name = document.getElementById('in-p2').value || "ペア";
+            state.opp_name = document.getElementById('in-opp').value || "対戦相手";
             render();
         }
 
         function render() {
             document.getElementById('points').innerText = state.p1_score + " — " + state.p2_score;
-            document.getElementById('games').innerText = "Game: " + state.p1_games + " — " + state.p2_games;
+            document.getElementById('games').innerText = "Total Games: " + state.p1_games + " — " + state.p2_games;
             document.getElementById('match-display').innerText = state.match;
-            document.getElementById('names-display').innerText = state.p1_name + " & " + state.p2_name;
-            document.getElementById('p1-tag').innerText = state.p1_name;
-            document.getElementById('p2-tag').innerText = state.p2_name;
-            document.getElementById('cur-player').innerText = "記録中: " + (state.active === 1 ? state.p1_name : state.p2_name);
+            document.getElementById('names-display').innerText = state.p1_name + " & " + state.p2_name + " vs " + state.opp_name;
             
-            // 統計テーブル生成
-            let h = "<table><tr><th>項目</th><th>" + state.p1_name + "</th><th>" + state.p2_name + "</th></tr>";
+            // 統計テーブル
+            let h = "<table><tr><th>項目</th><th>合計</th></tr>";
             statsToShow.forEach(it => {
-                h += `<tr><td>${it}</td><td>${state.stats.p1[it] || 0}</td><td>${state.stats.p2[it] || 0}</td></tr>`;
+                let total = (state.stats.p1[it] || 0) + (state.stats.p2[it] || 0);
+                h += `<tr><td>${it}</td><td>${total}</td></tr>`;
             });
             document.getElementById('stats-area').innerHTML = h + "</table>";
-        }
 
-        function resetAll() {
-            if(confirm("全てのデータをリセットしますか？")) { location.reload(); }
+            // 履歴表示
+            let histH = "";
+            state.game_history.forEach((g, i) => {
+                histH += `<span class="history-item">G${i+1}: ${g}</span>`;
+            });
+            document.getElementById('history-area').innerHTML = histH || "進行中...";
         }
 
         initButtons();
@@ -169,5 +154,4 @@ html_code = """
 </html>
 """
 
-# 表示
-components.html(html_code, height=850, scrolling=True)
+components.html(html_code, height=1000, scrolling=True)

@@ -2,11 +2,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ページ設定
-st.set_page_config(page_title="Tennis Counter HTML", layout="centered")
+st.set_page_config(page_title="Tennis Stats", layout="centered")
 
-# Python側ではHTMLを表示するだけ（データはブラウザのJavaScriptで完結）
-st.markdown("### テニスカウンター (HTML/JS完全版)")
-
+# HTML完全版（タイトル削除 ＆ 統計項目修正）
 html_code = """
 <!DOCTYPE html>
 <html lang="ja">
@@ -14,41 +12,42 @@ html_code = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: white; color: black; margin: 0; padding: 10px; }
+        body { font-family: -apple-system, sans-serif; background-color: white; color: black; margin: 0; padding: 5px; }
         .match-name { text-align: center; font-size: 14px; margin-bottom: 5px; color: #666; font-weight: bold; }
         
         /* スコアボード */
-        .score-box { background: #222; color: white; border-radius: 12px; text-align: center; padding: 15px; margin-bottom: 15px; }
-        .pair-names { font-size: 12px; opacity: 0.8; margin-bottom: 5px; }
-        .main-score { font-size: 48px; font-weight: 900; line-height: 1; margin: 10px 0; }
-        .game-score { font-size: 16px; color: #4CAF50; font-weight: bold; }
+        .score-box { background: #222; color: white; border-radius: 12px; text-align: center; padding: 12px; margin-bottom: 12px; }
+        .pair-names { font-size: 12px; opacity: 0.8; margin-bottom: 3px; }
+        .main-score { font-size: 46px; font-weight: 900; line-height: 1; margin: 8px 0; }
+        .game-score { font-size: 14px; color: #4CAF50; font-weight: bold; }
 
         /* 選手選択 */
-        .player-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        .p-btn { border: 2px solid #007AFF; background: white; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; }
+        .player-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .p-btn { border: 2px solid #007AFF; background: white; padding: 8px; border-radius: 6px; font-weight: bold; text-align: center; font-size: 13px; }
         .p-btn.active { background: #007AFF; color: white; }
 
-        .active-label { text-align: center; font-size: 13px; font-weight: bold; margin: 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .active-label { text-align: center; font-size: 12px; font-weight: bold; margin: 8px 0; border-bottom: 1px solid #eee; padding-bottom: 4px; }
 
         /* カウンターボタン */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
         .btn { 
-            height: 50px; border-radius: 6px; display: flex; align-items: center; justify-content: center; 
-            color: white; font-weight: bold; font-size: 12px; text-align: center; line-height: 1.2;
+            height: 48px; border-radius: 5px; display: flex; align-items: center; justify-content: center; 
+            color: white !important; font-weight: bold; font-size: 11.5px; text-align: center; line-height: 1.1;
             cursor: pointer; -webkit-tap-highlight-color: transparent; border: none;
         }
         .btn-win { background-color: #007AFF; }
         .btn-loss { background-color: #FF3B30; }
-        .btn:active { opacity: 0.7; transform: scale(0.98); }
+        .btn:active { opacity: 0.6; transform: scale(0.96); }
 
-        /* ヘッダー */
-        .header { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 5px; text-align: center; font-size: 12px; font-weight: bold; }
+        .header { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; text-align: center; font-size: 11px; font-weight: bold; }
         
-        /* 下部メニュー */
-        .footer { margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px; }
-        input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        /* 下部設定 */
+        .footer { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px; }
+        summary { font-size: 13px; color: #555; padding: 5px; cursor: pointer; }
+        input { width: 100%; padding: 8px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; background: #fff; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+        th { background: #f8f9fa; }
     </style>
 </head>
 <body>
@@ -74,16 +73,16 @@ html_code = """
     </div>
 
     <div class="grid" id="button-area">
-        <!-- JSで生成 -->
+        <!-- JSでボタン生成 -->
     </div>
 
     <div class="footer">
         <details>
-            <summary>⚙️ 設定 / 📊 統計</summary>
+            <summary>⚙️ 設定 / 📊 統計を確認</summary>
             <input type="text" id="in-match" placeholder="試合名" oninput="updateSettings()">
-            <input type="text" id="in-p1" placeholder="自分" oninput="updateSettings()">
-            <input type="text" id="in-p2" placeholder="ペア" oninput="updateSettings()">
-            <button onclick="resetAll()" style="width:100%; padding:10px; background:#f44336; color:white; border:none; border-radius:4px; margin-top:10px;">全リセット</button>
+            <input type="text" id="in-p1" placeholder="選手1の名前" oninput="updateSettings()">
+            <input type="text" id="in-p2" placeholder="選手2の名前" oninput="updateSettings()">
+            <button onclick="resetAll()" style="width:100%; padding:10px; background:#f44336; color:white; border:none; border-radius:4px; margin:10px 0; font-weight:bold;">全リセット</button>
             <div id="stats-area"></div>
         </details>
     </div>
@@ -95,8 +94,12 @@ html_code = """
             stats: { p1: {}, p2: {} }
         };
 
+        // カウント用全項目
         const wins = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', '相手のミス', '相手のダブルフォルト'];
         const loss = ['ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス', '相手のエース', '相手のサービスエース'];
+
+        // 統計に表示する項目（ご要望により「相手の〜」を除外）
+        const statsToShow = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', 'ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス'];
 
         function initButtons() {
             const area = document.getElementById('button-area');
@@ -145,18 +148,18 @@ html_code = """
             document.getElementById('names-display').innerText = state.p1_name + " & " + state.p2_name;
             document.getElementById('p1-tag').innerText = state.p1_name;
             document.getElementById('p2-tag').innerText = state.p2_name;
-            setPlayer(state.active);
+            document.getElementById('cur-player').innerText = "記録中: " + (state.active === 1 ? state.p1_name : state.p2_name);
             
-            // 統計更新
+            // 統計テーブル生成
             let h = "<table><tr><th>項目</th><th>" + state.p1_name + "</th><th>" + state.p2_name + "</th></tr>";
-            [...wins, ...loss].forEach(it => {
-                h += `<tr><td>${it}</td><td>${state.stats.p1[it]}</td><td>${state.stats.p2[it]}</td></tr>`;
+            statsToShow.forEach(it => {
+                h += `<tr><td>${it}</td><td>${state.stats.p1[it] || 0}</td><td>${state.stats.p2[it] || 0}</td></tr>`;
             });
             document.getElementById('stats-area').innerHTML = h + "</table>";
         }
 
         function resetAll() {
-            if(confirm("リセットしますか？")) { location.reload(); }
+            if(confirm("全てのデータをリセットしますか？")) { location.reload(); }
         }
 
         initButtons();
@@ -166,5 +169,5 @@ html_code = """
 </html>
 """
 
-# HTMLをコンポーネントとして埋め込む（iPhoneの画面いっぱいに表示）
+# 表示
 components.html(html_code, height=850, scrolling=True)

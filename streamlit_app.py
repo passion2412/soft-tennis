@@ -4,11 +4,11 @@ import streamlit.components.v1 as components
 # 1. ページ設定
 st.set_page_config(page_title="Tennis Counter Rooms", layout="centered")
 
-# 2. 部屋番号の入力（URLを共有しても、ここで入力した名前が違うとデータが混ざりません）
-room_id = st.text_input("🔑 部屋番号（合言葉）を入力してください", "RoomA", help="友人と別々に使うときは、ここを違う名前にしてください")
+# 2. 部屋番号の入力（これによってデータが混ざるのを防ぐ）
+room_id = st.text_input("🔑 部屋番号（合言葉）を入力してください", "RoomA")
 
 if room_id:
-    # 部屋ごとに独立したHTMLを表示（keyにroom_idを含めることでキャッシュ混同を防ぐ）
+    # JavaScriptの波括弧 { } を Pythonの f-string で扱うために {{ }} に修正済み
     html_code = f"""
     <!DOCTYPE html>
     <html lang="ja">
@@ -147,5 +147,5 @@ if room_id:
     </body>
     </html>
     """
-    # 部屋ごとに独立したインスタンスとして扱う
-    components.html(html_code, height=1300, scrolling=True, key=f"room_{room_id}")
+    # 部屋ごとに独立したインスタンスとして扱う。keyにroom_idを入れるのがミソです。
+    components.html(html_code, height=1300, scrolling=True, key=f"tennis_room_{room_id}")

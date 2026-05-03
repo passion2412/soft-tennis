@@ -4,7 +4,7 @@ import pandas as pd
 # 1. ページ設定
 st.set_page_config(page_title="Tennis Counter", layout="centered")
 
-# 2. 初期設定（項目名完全復元）
+# 2. 初期設定
 items_won = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', '相手のミス', '相手のダブルフォルト']
 items_lost = ['ダブルフォルト', 'レシーブミス', 'スマッシュミス', 'ストロークミス', 'ボレーミス', '相手のエース', '相手のサービスエース']
 
@@ -16,95 +16,90 @@ if 'p1_score' not in st.session_state:
         'active_player': 1, 'p1_name': "自分", 'p2_name': "ペア", 'match_name': "今日の試合"
     })
 
-# 3. 超軽量・確実なカウントロジック
-# 標準のst.buttonを「見た目だけ」CSSで完全に作り変える
-def add(item, win):
+# 3. カウント関数
+def count_point(item, is_win):
     stats = st.session_state.p1_stats if st.session_state.active_player == 1 else st.session_state.p2_stats
     stats[item] += 1
-    if win: st.session_state.p1_score += 1
+    if is_win: st.session_state.p1_score += 1
     else: st.session_state.p2_score += 1
-    
     p1, p2 = st.session_state.p1_score, st.session_state.p2_score
     if (p1 >= 4 or p2 >= 4) and abs(p1 - p2) >= 2:
         if p1 > p2: st.session_state.p1_games += 1
         else: st.session_state.p2_games += 1
         st.session_state.p1_score, st.session_state.p2_score = 0, 0
 
-# 4. CSS（「完璧な表示」を再現しつつ、崩れを物理的に阻止）
+# 4. CSS（究極の表示死守設定）
 st.markdown("""
 <style>
-    /* 全体設定 */
+    /* 全体背景を白、文字を黒に固定 */
     .stApp { background-color: white !important; color: black !important; }
     
-    /* スコアボード：高さ固定で崩れ防止 */
-    .sb {
+    /* スコアボード */
+    .score-board {
         width: 100%; background: #222; color: white; border-radius: 8px;
         text-align: center; padding: 10px 0; margin-bottom: 10px;
     }
 
-    /* 2列を絶対死守するコンテナ */
-    [data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important;
-        flex-wrap: nowrap !important; gap: 4px !important;
-    }
-    [data-testid="column"] { flex: 1 !important; min-width: 0 !important; }
-
-    /* ボタン：iPhoneの文字消え・崩れを徹底排除 */
-    div.stButton > button {
-        width: 100% !important;
-        height: 44px !important;
-        padding: 0 2px !important;
-        font-size: 11px !important;
-        font-weight: bold !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 4px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        word-break: break-all !important; /* 長い単語を強制改行して収める */
+    /* 2列グリッドを強制（iPhoneの自動調整を無視） */
+    .grid-container {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 4px; width: 100%; position: relative;
     }
 
-    /* 文字色を「絶対」に見せるための指定 */
-    div.stButton > button p {
-        color: white !important; 
-        font-size: 11px !important;
-        margin: 0 !important;
-        line-height: 1.1 !important;
+    /* ボタンの土台（HTMLで描画するから文字が消えない） */
+    .btn-base {
+        display: flex; align-items: center; justify-content: center;
+        height: 44px; border-radius: 5px; font-size: 11.5px;
+        font-weight: 800; color: white !important; text-align: center;
+        line-height: 1.1; pointer-events: none; /* 下のボタンにクリックを通す */
     }
-    
-    /* 得点(青)・失点(赤) */
-    [data-testid="column"]:nth-of-type(1) div.stButton > button { background-color: #007AFF !important; }
-    [data-testid="column"]:nth-of-type(2) div.stButton > button { background-color: #FF3B30 !important; }
+    .w-color { background-color: #007AFF; }
+    .l-color { background-color: #FF3B30; }
 
-    /* 余計な余白をカット */
-    .block-container { padding-top: 1rem !important; }
+    /* 重ねる本物のボタンを透明化 */
+    div.stButton { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; }
+    div.stButton > button { width: 100% !important; height: 44px !important; border: none !important; }
+
+    /* カラムの相対位置固定 */
+    [data-testid="column"] { position: relative; min-width: 0 !important; flex: 1 !important; }
+    [data-testid="stHorizontalBlock"] { display: flex !important; flex-wrap: nowrap !important; gap: 4px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# 5. UI（表示オッケーと言われたシンプル構成）
-st.markdown(f'<div style="text-align:center; font-size:12px; color:#666;">{st.session_state.match_name}</div>', unsafe_allow_html=True)
+# 5. UI描画
+st.markdown(f'<div style="text-align:center; font-size:14px; font-weight:bold; color:#555;">{st.session_state.match_name}</div>', unsafe_allow_html=True)
 st.markdown(f"""
-<div class="sb">
-    <div style="font-size: 11px; opacity: 0.8;">{st.session_state.p1_name} & {st.session_state.p2_name}</div>
-    <div style="font-size: 32px; font-weight: 900;">{st.session_state.p1_score} — {st.session_state.p2_score}</div>
-    <div style="font-size: 13px; color: #4CAF50;">Game: {st.session_state.p1_games} - {st.session_state.p2_games}</div>
+<div class="score-board">
+    <div style="font-size: 12px; opacity: 0.8;">{st.session_state.p1_name} & {st.session_state.p2_name}</div>
+    <div style="font-size: 38px; font-weight: 900; line-height: 1;">{st.session_state.p1_score} — {st.session_state.p2_score}</div>
+    <div style="font-size: 14px; color: #4CAF50; margin-top: 4px;">Game: {st.session_state.p1_games} - {st.session_state.p2_games}</div>
 </div>
 """, unsafe_allow_html=True)
 
 # 選手選択
 c1, c2 = st.columns(2)
-c1.button(f"👤 {st.session_state.p1_name}", key="p1btn", on_click=lambda: st.session_state.update(active_player=1))
-c2.button(f"👤 {st.session_state.p2_name}", key="p2btn", on_click=lambda: st.session_state.update(active_player=2))
+with c1: st.button(st.session_state.p1_name, key="p1_sel")
+with c2: st.button(st.session_state.p2_name, key="p2_sel")
+# 簡易的な選手切り替え（透明ボタン方式だと複雑になるため標準を使用）
+if st.session_state.get("p1_sel"): st.session_state.active_player = 1
+if st.session_state.get("p2_sel"): st.session_state.active_player = 2
 
 active_name = st.session_state.p1_name if st.session_state.active_player == 1 else st.session_state.p2_name
-st.markdown(f"<div style='text-align:center; font-size:12px; font-weight:bold; margin: 5px 0;'>記録中: {active_name}</div>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:center; font-weight:bold; font-size:13px;'>記録中: {active_name}</p>", unsafe_allow_html=True)
 
-# 6. メインカウンター
+# 6. 入力パネル（HTMLの見た目 + 透明なボタンの融合）
 for w, l in zip(items_won, items_lost):
-    col1, col2 = st.columns(2)
-    col1.button(w, key=f"w_{w}", on_click=add, args=(w, True))
-    col2.button(l, key=f"l_{l}", on_click=add, args=(l, False))
+    col_w, col_l = st.columns(2)
+    with col_w:
+        # 見た目（HTML）
+        st.markdown(f'<div class="btn-base w-color">{w}</div>', unsafe_allow_html=True)
+        # 実行（透明ボタン）
+        st.button("", key=f"re_w_{w}", on_click=count_point, args=(w, True))
+    with col_l:
+        # 見た目（HTML）
+        st.markdown(f'<div class="btn-base l-color">{l}</div>', unsafe_allow_html=True)
+        # 実行（透明ボタン）
+        st.button("", key=f"re_l_{l}", on_click=count_point, args=(l, False))
 
 # 7. 設定・統計
 with st.expander("⚙️ 設定 / 📊 統計"):

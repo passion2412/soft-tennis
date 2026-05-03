@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # ページ設定
-st.set_page_config(page_title="Tennis Doubles Stats", layout="centered")
+st.set_page_config(page_title="Tennis Counter", layout="centered")
 
 # --- 1. 初期設定 ---
 items_won = ['サービスエース', 'レシーブエース', 'スマッシュ', 'エース', 'ボレー', '相手のミス', '相手のDF']
@@ -13,7 +13,7 @@ if 'history' not in st.session_state:
         'p1_score': 0, 'p2_score': 0, 'p1_games': 0, 'p2_games': 0,
         'p1_stats': {i: 0 for i in items_won + items_lost},
         'p2_stats': {i: 0 for i in items_won + items_lost},
-        'active_player': 1, 'p1_name': "自分", 'p2_name': "パートナー"
+        'active_player': 1, 'p1_name': "自分", 'p2_name': "ペア"
     })
 
 # --- 2. カウント関数 ---
@@ -23,97 +23,98 @@ def add_point(item, is_win):
     stats[item] += 1
     if is_win: st.session_state.p1_score += 1
     else: st.session_state.p2_score += 1
-    
+    # スコア判定
     p1, p2 = st.session_state.p1_score, st.session_state.p2_score
     if (p1 >= 4 or p2 >= 4) and abs(p1 - p2) >= 2:
         if p1 > p2: st.session_state.p1_games += 1
         else: st.session_state.p2_games += 1
         st.session_state.p1_score, st.session_state.p2_score = 0, 0
 
-# --- 3. CSS (iPhone専用・絶対死守設定) ---
+# --- 3. CSS (余白削除・2列絶対固定・文字色保護) ---
 st.markdown("""
 <style>
+    /* 1. 全体背景と文字色 */
     .stApp { background-color: white !important; color: black !important; }
     
-    /* スコア表示をコンパクトに */
+    /* 2. スコアボードを極限までコンパクトに */
     .score-ui {
-        background: #333; color: white; border-radius: 8px;
-        text-align: center; padding: 5px; margin-bottom: 10px;
+        text-align: center; border: 2px solid black; padding: 5px; 
+        border-radius: 10px; background-color: #f0f2f6; margin-bottom: 5px;
     }
 
-    /* 横並びを絶対に維持(1:1分割) */
+    /* 3. 2列の余白をゼロにしてiPhone画面に収める */
     [data-testid="stHorizontalBlock"] {
-        display: flex !important; flex-direction: row !important;
-        flex-wrap: nowrap !important; gap: 4px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 2px !important; /* 列間の隙間を最小化 */
     }
-    [data-testid="column"] { flex: 1 !important; min-width: 0 !important; }
+    [data-testid="column"] {
+        flex: 1 1 50% !important;
+        min-width: 48% !important;
+        padding: 0 !important; /* 内部余白を削除 */
+    }
 
-    /* ボタンの文字を絶対に見せる */
+    /* 4. ボタンデザインの再定義 */
     div.stButton > button {
-        width: 100% !important; height: 45px !important;
-        font-size: 11px !important; /* 画面に収めるため小さく */
+        width: 100% !important;
+        height: 42px !important; /* 高さを少し抑えて画面内に収める */
         font-weight: bold !important;
-        border-radius: 6px !important;
+        font-size: 12px !important;
+        border-radius: 5px !important;
+        border: none !important;
         color: white !important;
-        text-shadow: 1px 1px 1px rgba(0,0,0,0.5); /* 文字の輪郭を強調 */
-        padding: 0px !important;
     }
     
-    /* 得点(青) / 失点(赤) */
-    [data-testid="column"]:nth-of-type(1) div.stButton > button { background-color: #0056b3 !important; }
-    [data-testid="column"]:nth-of-type(2) div.stButton > button { background-color: #d32f2f !important; }
+    /* 左(青)・右(赤)の背景色 */
+    [data-testid="column"]:nth-of-type(1) div.stButton > button { background-color: #007AFF !important; }
+    [data-testid="column"]:nth-of-type(2) div.stButton > button { background-color: #FF3B30 !important; }
 
-    /* ボタン内のテキスト消滅防止 */
-    div.stButton > button p { color: white !important; font-size: 11px !important; }
+    /* 文字色を白に強制 */
+    div.stButton > button p { color: white !important; margin: 0 !important; }
+    
+    /* 統計テーブルを見やすく */
+    .stTable { background-color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. UI描画 ---
-# スコア
+# --- 4. 画面表示 ---
 st.markdown(f"""
 <div class="score-ui">
-    <div style="font-size: 16px;">{st.session_state.p1_name} & {st.session_state.p2_name} ペア</div>
-    <div style="font-size: 32px; font-weight: bold; color: #4CAF50;">
-        {st.session_state.p1_games} <span style="font-size:14px; color:white;">games</span> {st.session_state.p2_games}
-    </div>
-    <div style="font-size: 24px; font-weight: bold;">{st.session_state.p1_score} — {st.session_state.p2_score}</div>
+    <div style="font-size: 20px; font-weight: bold; color: black;">{st.session_state.p1_games} — {st.session_state.p2_games}</div>
+    <div style="font-size: 38px; font-weight: bold; color: #007AFF; line-height: 1;">{st.session_state.p1_score} — {st.session_state.p2_score}</div>
+    <div style="font-size: 12px; color: black;">{st.session_state.p1_name} & {st.session_state.p2_name}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# 選手切り替え
+# 選手選択
 c1, c2 = st.columns(2)
-if c1.button(f"👤 {st.session_state.p1_name}", key="p1"):
+if c1.button(st.session_state.p1_name, key="sel1"):
     st.session_state.active_player = 1
     st.rerun()
-if c2.button(f"👤 {st.session_state.p2_name}", key="p2"):
+if c2.button(st.session_state.p2_name, key="sel2"):
     st.session_state.active_player = 2
     st.rerun()
 
-# 入力中表示
+# 入力中ラベル
 active_name = st.session_state.p1_name if st.session_state.active_player == 1 else st.session_state.p2_name
-st.markdown(f"<div style='text-align:center; font-size:13px; font-weight:bold;'>【 {active_name} 】のプレーを入力</div>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:center; font-weight:bold; font-size:13px; margin:5px 0;'>入力中: {active_name}</p>", unsafe_allow_html=True)
 
-# ヘッダー
-h1, h2 = st.columns(2)
-h1.markdown("<div style='text-align:center; color:#0056b3; font-size:11px; font-weight:bold;'>▼ 得点</div>", unsafe_allow_html=True)
-h2.markdown("<div style='text-align:center; color:#d32f2f; font-size:11px; font-weight:bold;'>▼ 失点</div>", unsafe_allow_html=True)
+# --- 5. 入力エリア (2列・隙間なし) ---
+for w_item, l_item in zip(items_won, items_lost):
+    row_c1, row_c2 = st.columns(2)
+    with row_c1:
+        st.button(w_item, key=f"w_{w_item}", on_click=add_point, args=(w_item, True))
+    with row_c2:
+        st.button(l_item, key=f"l_{l_item}", on_click=add_point, args=(l_item, False))
 
-# --- 5. 入力ボタン (ここが死守ポイント) ---
-for w, l in zip(items_won, items_lost):
-    col_w, col_l = st.columns(2)
-    with col_w:
-        st.button(w, key=f"w_{w}", on_click=add_point, args=(w, True))
-    with col_l:
-        st.button(l, key=f"l_{l}", on_click=add_point, args=(l, False))
-
-# --- 6. 設定・統計 ---
-with st.expander("⚙️ 名前設定 / 📊 統計"):
-    st.session_state.p1_name = st.text_input("選手1 名前", st.session_state.p1_name)
-    st.session_state.p2_name = st.text_input("選手2 名前", st.session_state.p2_name)
-    st.divider()
-    st.write(f"**{st.session_state.p1_name}**の統計", pd.Series(st.session_state.p1_stats))
-    st.write(f"**{st.session_state.p2_name}**の統計", pd.Series(st.session_state.p2_stats))
-    if st.button("リセット"):
+# --- 6. 統計と設定 ---
+st.divider()
+with st.expander("📊 統計・名前設定"):
+    st.session_state.p1_name = st.text_input("選手1", st.session_state.p1_name)
+    st.session_state.p2_name = st.text_input("選手2", st.session_state.p2_name)
+    st.write(f"**{st.session_state.p1_name}**", pd.Series(st.session_state.p1_stats))
+    st.write(f"**{st.session_state.p2_name}**", pd.Series(st.session_state.p2_stats))
+    if st.button("全リセット"):
         st.session_state.clear()
         st.rerun()
-
